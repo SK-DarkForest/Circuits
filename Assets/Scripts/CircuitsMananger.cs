@@ -10,6 +10,7 @@ public class CircuitsMananger : MonoBehaviour
     public bool dragging = false;
     private MouseInfo mouseInfo;
     private Texture2D mainTexture, pinTexture;
+    public bool solved = false;
     void Start()
     {
         mainTexture = new Texture2D(1, 1);
@@ -47,6 +48,11 @@ public class CircuitsMananger : MonoBehaviour
         button.pins[0].connect(OR.pins[0]);
         AND.pins[2].connect(lamp2.pins[0]);
         OR.pins[2].connect(lamp3.pins[0]);
+        List<Pin> pins = new List<Pin>();
+        pins.Add(lamp.pins[0]);
+        pins.Add(lamp2.pins[0]);
+        float[] filters = {.5f,.5f};
+        circuit.addSolvedCallback(pins, filters, Callback);
     }
 
     // Update is called once per frame
@@ -80,9 +86,35 @@ public class CircuitsMananger : MonoBehaviour
         mouseInfo.pressed = Input.GetMouseButton(0);
         circuit.display(mouseInfo);
         circuit.update(mouseInfo);
+        if(solved) Message();
     }
     public void Callback(){
         Debug.Log("Solved!");
+        solved = true;
+    }
+    public void Message(){
+        float overlayWidth = 400;
+        float overlayHeight = 200;
+        float overlayX = (Screen.width - overlayWidth) / 2;
+        float overlayY = (Screen.height - overlayHeight) / 2;
+
+        // Draw a semi-transparent background
+        Color color = Color.white;
+        color.a = .5f;
+        GUI.color = color;
+        GUI.DrawTexture(new Rect(overlayX, overlayY, overlayWidth, overlayHeight), Info.mainTexture);
+
+        // Reset the color to white for the text
+        GUI.color = Color.black;
+
+        // Set the font size (optional)
+        GUIStyle style = new GUIStyle(GUI.skin.label);
+        style.fontSize = 20;
+        style.alignment = TextAnchor.MiddleCenter;
+
+        // Display the title text
+        GUI.Label(new Rect(overlayX, overlayY-50, overlayWidth, overlayHeight), "Du hast dein erstes Rätsel gelöst!", style);
+        GUI.Label(new Rect(overlayX, overlayY+50, overlayWidth, overlayHeight), "Die Tür öffnet sich.", style);
     }
 }
 
