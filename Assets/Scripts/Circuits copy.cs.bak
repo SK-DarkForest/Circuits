@@ -1,0 +1,261 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using System;
+
+
+public class Circuit{
+    public Action Callback;
+    public List<Pin> checkablePins;
+    public float[] filters = new float[0];
+    public Circuit(){
+        Components = new List<Component>();
+        mainTexture = new Texture2D(1, 1);
+        mainTexture.SetPixel(0, 0, Color.white);
+        mainTexture.Apply();
+        pinTexture = new Texture2D(1, 1);
+        pinTexture.SetPixel(0, 0, Color.red);
+        pinTexture.Apply();
+    }
+    public List<Component> Components;
+    public Texture2D mainTexture;
+    public Texture2D pinTexture;
+    public Vector2 offset;
+    public void add(Component component){
+        Components.Add(component);
+    }
+    public void delete(Component component){
+        Components.Remove(component);
+    }
+    public void display(MouseInfo mouseInfo){
+        foreach(Component component in Components){
+            component.display(mainTexture, pinTexture, offset, mouseInfo);
+        }
+        bool solved = checkIfSolvedAt(checkablePins, filters);
+        if(solved && Callback != null){
+            Callback();
+        }
+    }
+    public bool moveComponent(Vector2 position){
+        foreach(Component component in Components){
+            if(component.position.x+offset.x < position.x && component.position.x+offset.x+50 > position.x && component.position.y+offset.y < position.y && component.position.y+offset.y+50 > position.y){
+                component.position.x += Event.current.delta.x;
+                component.position.y += Event.current.delta.y;
+                return true;
+            }
+        }
+        return false;
+    }
+    public bool loadCircuit(Circuit circuit){
+        if(circuit.Components.Count == 0){
+            return false;
+        }
+        foreach(Component component in circuit.Components){
+            add(component);
+        }
+        return true;
+    }
+    public bool checkIfSolvedAt(List<Pin> pins, float[] filters){
+        if((pins==null||filters==null)){
+            return false;
+        }
+        int i = 0;
+        foreach (Pin pin in pins)
+        {
+            if(pin.value<filters[i]){
+                return false;
+            }
+            i++;
+        }
+        return true;
+    }
+    public bool addSolvedCallback(List<Pin> pins, float[] filters, Action callback){
+        if((pins==null||filters==null||callback==null)){
+            return false;
+        }
+        this.Callback = callback;
+        this.checkablePins = pins;
+        this.filters = filters;
+        return true;
+    }
+}
+
+public class Component{
+    public Vector2 position;
+    public List<Component> connections;
+    public List<Pin> pins;
+    public bool isDeletable = true;
+    public string name = "Component";
+    public Vector2 size = new Vector2(50, 50);
+    public Component(Vector2 position){
+        this.position = position;
+        this.pins = new List<Pin>();
+        this.connections = new List<Component>();
+    }
+    virtual public void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
+        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, this.size.x, this.size.y), mainTexture);
+        int i = 0;
+        foreach (Pin pin in pins)
+        {
+            pin.display((this.pins[i].value>.5)? mainTexture : pinTexture, offset+position, mouseInfo);
+            i++;
+        }
+        i=0;
+        foreach (Component component in connections)
+        {
+            Drawing.DrawLine(this.pins[i].position, component.pins[component.connections.IndexOf(this)].position, Color.red, 5, false);
+            if(component.pins[component.connections.IndexOf(this)].type == Type.Input&&this.pins[i].type == Type.Output){
+                component.pins[component.connections.IndexOf(this)].value = this.pins[i].value;
+            }
+            i++;
+        }
+    }
+}
+
+public enum Type
+{
+    Input,
+    Output
+}
+
+public class Pin{
+    public Vector2 position;
+    public Type type = Type.Output;
+    public float value = 0f;
+    public List<Pin> connections = new List<Pin>();
+    public Pin(Vector2 position){
+        this.position = position;
+    }
+    public void display(Texture2D texture, Vector2 offset, MouseInfo mouseInfo){
+        GUI.DrawTexture(new Rect(this.position.x+offset.x-10, this.position.y+offset.y-10, 20, 20), texture);
+    }
+}
+
+public class Button : Component{
+    public Button(Vector2 position): base(position){
+        this.position = position;
+        this.pins.Add(new Pin(new Vector2(this.size.x, this.size.y/2)));
+        this.name = "Button";
+    }
+    public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
+        if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
+            this.pins[0].value = (this.pins[0].value-1)*(this.pins[0].value-1);
+        }
+        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), mainTexture);
+        
+        int i = 0;
+        foreach (Pin pin in pins)
+        {
+            pin.display((this.pins[i].value>.5)? mainTexture : pinTexture, offset+position, mouseInfo);
+            i++;
+        }
+        i=0;
+        foreach (Component component in connections)
+        {
+            Drawing.DrawLine(this.pins[i].position+this.position+offset, component.pins[component.connections.IndexOf(this)].position+component.position+offset, Color.red, 5, false);
+            if(component.pins[component.connections.IndexOf(this)].type == Type.Input&&this.pins[i].type == Type.Output){
+                component.pins[component.connections.IndexOf(this)].value = this.pins[i].value;
+            }
+            i++;
+        }
+        Debug.Log("Button: "+this.pins[0].value);
+    }
+}
+
+public class Lamp : Component{
+    public Lamp(Vector2 position): base(position){
+        this.position = position;
+        this.pins = new List<Pin>();
+        this.pins.Add(new Pin(new Vector2(0, 25)));
+        this.name = "Lamp";
+    }
+    public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
+        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), (this.pins[0].value==1)?pinTexture:mainTexture);
+        int i = 0;
+        foreach (Pin pin in pins)
+        {
+            pin.display((this.pins[i].value>.5)? mainTexture : pinTexture, offset+position, mouseInfo);
+            i++;
+        }
+        i=0;
+        foreach (Component component in connections)
+        {
+            Drawing.DrawLine(this.pins[i].position+this.position+offset, component.pins[component.connections.IndexOf(this)].position+component.position+offset, Color.red, 5, false);
+            if(component.pins[component.connections.IndexOf(this)].type == Type.Input&&this.pins[i].type == Type.Output){
+                component.pins[component.connections.IndexOf(this)].value = this.pins[i].value;
+            }
+            i++;
+        }
+        Debug.Log("Lamp: "+this.pins[0].value);
+    }
+}
+
+public class Signal : Component{
+    public Signal(Vector2 position): base(position){
+        this.position = position;
+        this.pins = new List<Pin>();
+        this.pins.Add(new Pin(new Vector2(0, 25)));
+        this.name = "Signal";
+    }
+    public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
+        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), (this.pins[0].value==1)?pinTexture:mainTexture);
+        int i = 0;
+        foreach (Pin pin in pins)
+        {
+            pin.display((this.pins[i].value>.5)? mainTexture : pinTexture, offset+position, mouseInfo);
+            i++;
+        }
+        i=0;
+        foreach (Component component in connections)
+        {
+            Drawing.DrawLine(this.pins[i].position+this.position+offset, component.pins[component.connections.IndexOf(this)].position+component.position+offset, Color.red, 5, false);
+            if(component.pins[component.connections.IndexOf(this)].type == Type.Input&&this.pins[i].type == Type.Output){
+                component.pins[component.connections.IndexOf(this)].value = this.pins[i].value;
+            }
+            i++;
+        }
+        Debug.Log("Lamp: "+this.pins[0].value);
+    }
+}
+
+public class Osziloskop : Component{
+    Texture2D drawTex;
+    public int[] currents = new int[500];
+    public Osziloskop(Vector2 position): base(position){
+        this.position = position;
+        this.pins = new List<Pin>();
+        this.pins.Add(new Pin(new Vector2(-13, 25)));
+        this.name = "Osziloskop";
+        this.drawTex = new Texture2D(100,100);
+        for(int i=0;i<this.currents.Length;i++){
+            this.currents[i] = 0;
+        }
+    }
+    public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
+        //GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), (this.pins[0].value==1)?pinTexture:mainTexture);
+        int i = 0;
+        this.drawTex = new Texture2D(1,1);
+        this.drawTex.SetPixel(0,0,Color.white);
+        while(i<this.currents.Length){
+            GUI.DrawTexture(new Rect(i*50/this.currents.Length+this.position.x+offset.x,(int)(25+Math.Sin((Time.realtimeSinceStartupAsDouble*2+i)/4)*25)+this.position.y+offset.y,1,1),this.drawTex);
+            i++;
+        }
+        //GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), this.drawTex);
+        i = 0;
+        foreach (Pin pin in pins)
+        {
+            pin.display((this.pins[i].value>.5)? mainTexture : pinTexture, offset+position, mouseInfo);
+            i++;
+        }
+    }
+}
+
+public class MouseInfo{
+    public Vector2 position;
+    public bool pressed;
+    public bool down;
+    public MouseInfo(){
+
+    }
+}

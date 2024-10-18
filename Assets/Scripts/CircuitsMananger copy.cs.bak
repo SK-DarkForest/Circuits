@@ -1,0 +1,65 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CircuitsMananger : MonoBehaviour
+{
+    // Start is called before the first frame update
+    private Circuit circuit;
+    private bool buttonPressed = false;
+    public bool dragging = false;
+    private MouseInfo mouseInfo;
+    void Start()
+    {
+        Button button = new Button(new Vector2(100, 100));
+        Lamp lamp = new Lamp(new Vector2(300,100));
+        Button button2 = new Button(new Vector2(100, 300));
+        Lamp lamp2 = new Lamp(new Vector2(300,200));
+        circuit = new();
+        circuit.add(button);
+        circuit.add(lamp);
+        circuit.add(button2);
+        circuit.add(lamp2);
+        circuit.add(new Osziloskop(new Vector2(200,200)));
+        lamp.connections.Add(button);
+        button.connections.Add(lamp);
+        lamp2.connections.Add(button2);
+        button2.connections.Add(lamp2);
+        mouseInfo = new();
+        Circuit cMini = new();
+        cMini.add(new Button(new Vector2(150, 250)));
+        circuit.loadCircuit(cMini);
+        circuit.addSolvedCallback(new List<Pin>{button.pins[0]}, new float[]{0.5f}, Callback);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    private void OnGUI() {
+        if(Event.current.type == EventType.MouseDown)
+        {
+            buttonPressed = true;
+        }
+        if(Event.current.type == EventType.MouseUp)
+        {
+            buttonPressed = false;
+        }
+
+        if(buttonPressed && Event.current.type == EventType.MouseDrag)
+        {
+            if(!circuit.moveComponent(Event.current.mousePosition)){
+                circuit.offset.x += Event.current.delta.x;
+                circuit.offset.y += Event.current.delta.y;
+            }
+        }
+        mouseInfo.position = Event.current.mousePosition;
+        mouseInfo.down = (Input.GetMouseButtonDown(0)&&!mouseInfo.pressed);
+        mouseInfo.pressed = Input.GetMouseButton(0);
+        circuit.display(mouseInfo);
+    }
+    public void Callback(){
+        Debug.Log("Solved!");
+    }
+}
