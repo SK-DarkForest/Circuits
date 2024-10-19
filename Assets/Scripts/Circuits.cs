@@ -102,11 +102,12 @@ public class Circuit{
         handlePinDrag(mouseInfo);
     }
     private void handlePinDrag(MouseInfo mouseInfo) {
-        if (mouseInfo.down) {
+        if (mouseInfo.down&&!isDraggingPin) {
             // Start dragging a pin if the mouse is over a pin
             foreach (Component component in Components) {
                 foreach (Pin pin in component.pins) {
                     if (isMouseOverPin(pin, mouseInfo)) {
+                        Debug.Log("Dragging pin");
                         draggedPin = pin;
                         isDraggingPin = true;
                         return;

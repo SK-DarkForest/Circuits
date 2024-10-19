@@ -58,7 +58,7 @@ public class CircuitsMananger : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        //Debug.Log("Circuit.isDraggingPin: "+circuit.isDraggingPin+" Circuit.draggedPin: "+circuit.draggedPin+ " Circuit.draggedComponent: "+circuit.draggedComponent+ "Dragging: "+dragging);
     }
     private void OnGUI() {
         if(Event.current.type == EventType.MouseDown)
@@ -73,7 +73,7 @@ public class CircuitsMananger : MonoBehaviour
             //circuit.draggedPin = null;
         }
 
-        if(buttonPressed && Event.current.type == EventType.MouseDrag&&!circuit.mouseOverPinsOrComponent(mouseInfo)&&!circuit.isDraggingPin)
+        if(buttonPressed && Event.current.type == EventType.MouseDrag&&!circuit.isDraggingPin)
         {
             if(!circuit.moveComponent(Event.current.mousePosition)){
                 circuit.offset.x += Event.current.delta.x;
