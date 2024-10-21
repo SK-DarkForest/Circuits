@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 public class CircuitsMananger : MonoBehaviour
 {
@@ -11,8 +12,22 @@ public class CircuitsMananger : MonoBehaviour
     private MouseInfo mouseInfo;
     private Texture2D mainTexture, pinTexture;
     public bool solved = false;
+    private Lamp lamp, lamp2, lamp3;
+    public static Texture2D load(string path)
+    {
+        byte[] fileData = File.ReadAllBytes(path);
+        Texture2D loadedTexture = new Texture2D(2, 2);
+        loadedTexture.LoadImage(fileData);
+        return loadedTexture;
+    }
     void Start()
     {
+        Info.Button = load("Button.png");
+        Info.Lamp = load("Lamp.png");
+        Info.ButtonActive = load("ButtonActive.png");
+        Info.LampActive = load("LampActive.png");
+        Info.OR = load("OR.png");
+        Info.AND = load("AND.png");
         mainTexture = new Texture2D(1, 1);
         mainTexture.SetPixel(0, 0, Color.white);
         mainTexture.Apply();
@@ -24,9 +39,9 @@ public class CircuitsMananger : MonoBehaviour
         this.mouseInfo = new();
         Button button = new Button(new Vector2(100, 150));
         Button button2 = new Button(new Vector2(100, 350));
-        Lamp lamp = new Lamp(new Vector2(200, 100));
-        Lamp lamp2 = new Lamp(new Vector2(300, 100));
-        Lamp lamp3 = new Lamp(new Vector2(300, 300));
+        lamp = new Lamp(new Vector2(200, 100));
+        lamp2 = new Lamp(new Vector2(300, 100));
+        lamp3 = new Lamp(new Vector2(300, 300));
         AGate AND = new AGate(new Vector2(200, 200));
         OGate OR = new OGate(new Vector2(200, 300));
         circuit = new();
@@ -41,13 +56,6 @@ public class CircuitsMananger : MonoBehaviour
         circuit.addSpawner(new Spawner(new Lamp(new Vector2(200,0)),5));
         circuit.addSpawner(new Spawner(new AGate(new Vector2(300,0)),5));
         circuit.addSpawner(new Spawner(new OGate(new Vector2(400,0)),5));
-        button.pins[0].connect(lamp.pins[0]);
-        button.pins[0].connect(AND.pins[0]);
-        button2.pins[0].connect(AND.pins[1]);
-        button2.pins[0].connect(OR.pins[1]);
-        button.pins[0].connect(OR.pins[0]);
-        AND.pins[2].connect(lamp2.pins[0]);
-        OR.pins[2].connect(lamp3.pins[0]);
         List<Pin> pins = new List<Pin>();
         pins.Add(lamp.pins[0]);
         pins.Add(lamp2.pins[0]);
@@ -58,6 +66,10 @@ public class CircuitsMananger : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(mouseInfo.up) Debug.Log("Up");
+        if(circuit.draggedComponent!=null)Debug.Log(circuit.draggedComponent);
+        //Debug.Log(mouseInfo.up);
+        //Debug.Log("1: "+lamp.pins[0].value+", 2: "+lamp2.pins[0].value+", 3: "+lamp3.pins[0].value);
         //Debug.Log("Circuit.isDraggingPin: "+circuit.isDraggingPin+" Circuit.draggedPin: "+circuit.draggedPin+ " Circuit.draggedComponent: "+circuit.draggedComponent+ "Dragging: "+dragging);
     }
     private void OnGUI() {
@@ -67,12 +79,11 @@ public class CircuitsMananger : MonoBehaviour
         }
         if(Event.current.type == EventType.MouseUp)
         {
-            mouseInfo.up = buttonPressed;
+            //mouseInfo.up = buttonPressed;
             buttonPressed = false;
-            circuit.draggedComponent = null;
             //circuit.draggedPin = null;
         }
-
+        mouseInfo.up = (Event.current.type == EventType.MouseUp);
         if(buttonPressed && Event.current.type == EventType.MouseDrag&&!circuit.isDraggingPin)
         {
             if(!circuit.moveComponent(Event.current.mousePosition)){

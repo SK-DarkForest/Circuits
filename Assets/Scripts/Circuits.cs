@@ -68,7 +68,12 @@ public class Circuit{
         component.circuit = this;
     }
     public void delete(Component component){
+        foreach (Pin pin in component.pins)
+        {
+            component.pins.Remove(pin);
+        }
         Components.Remove(component);
+        Debug.Log("Removed: "+component);
     }
     public void display(MouseInfo mouseInfo){
         foreach(Component component in Components){
@@ -99,10 +104,13 @@ public class Circuit{
         {
             spawner.update(mouseInfo,offset);
         }
+        if(mouseInfo.up){
+            this.draggedComponent = null;
+        }
         handlePinDrag(mouseInfo);
     }
     private void handlePinDrag(MouseInfo mouseInfo) {
-        if (mouseInfo.down&&!isDraggingPin) {
+        if (mouseInfo.down&&!isDraggingPin) {//if mouseInfo.down it always returns if mouseOverPin and does not drag
             // Start dragging a pin if the mouse is over a pin
             foreach (Component component in Components) {
                 foreach (Pin pin in component.pins) {
@@ -117,13 +125,29 @@ public class Circuit{
         }
 
         if (mouseInfo.up && isDraggingPin) {
+            //Debug.Log("Released pin");
             // On mouse release, try to connect to another pin
             foreach (Component component in Components) {
                 foreach (Pin targetPin in component.pins) {
                     if (isMouseOverPin(targetPin, mouseInfo) && draggedPin != null) {
+                        //Debug.Log("Connecting pins: "+draggedPin.connections+" -> "+targetPin.connections);
                         // Ensure valid connection (e.g., output to input)
+                        if(draggedPin.connections.Contains(targetPin)){
+                            Debug.Log("Removing connection: "+draggedPin.connections.Count);
+                            draggedPin.connections.Remove(targetPin);
+                            Debug.Log("Removed connection: "+draggedPin.connections.Count);
+                            break;
+                        }
+                        if(targetPin.connections.Contains(draggedPin)){
+                            Debug.Log("Removing connection: "+targetPin.connections.Count);
+                            targetPin.connections.Remove(draggedPin);
+                            Debug.Log("Removed connection: "+targetPin.connections.Count);
+                            break;
+                        }
                         if (draggedPin.type == Type.Output && targetPin.type == Type.Input) {
                             draggedPin.connect(targetPin);
+                        }else if(draggedPin.type == Type.Input && targetPin.type == Type.Output){
+                            targetPin.connect(draggedPin);
                         }
                         break;
                     }
@@ -133,6 +157,7 @@ public class Circuit{
             draggedPin = null;
             isDraggingPin = false;
         }
+        //mouseInfo.up = false;
     }
 
     private bool isMouseOverPin(Pin pin, MouseInfo mouseInfo) {
@@ -222,10 +247,12 @@ public class Spawner{
     }
     public void update(MouseInfo mouseInfo, Vector2 offset){
         if((mouseInfo.position.x>position.x)&&(mouseInfo.position.x<position.x+50)&&(mouseInfo.position.y>position.y)&&(mouseInfo.position.y<position.y+50)){
+        if(mouseInfo.up)Debug.Log("Over: "+circuit.draggedComponent);
             if(circuit.draggedComponent==null&&count>0&&mouseInfo.down){
                 circuit.add((Component)Activator.CreateInstance(component.GetType(), new Vector2(this.position.x - offset.x, this.position.y + 75 - offset.y)));
                 count--;
             }else if(circuit.draggedComponent!=null&&mouseInfo.up&&circuit.draggedComponent.isDeletable){
+                Debug.Log("Delete");
                 if(this.component.GetType()==circuit.draggedComponent.GetType()&&mouseInfo.up){
                     mouseInfo.up = false;
                     circuit.delete(circuit.draggedComponent);
@@ -242,12 +269,15 @@ public class Component{
     public bool isDeletable = true;
     public string name = "Component";
     public Vector2 size = new Vector2(50, 50);
+    public Texture2D sprite = null;
+
     public Component(Vector2 position){
         this.position = position;
         this.pins = new List<Pin>();
+        this.sprite = Info.mainTexture;
     }
     virtual public void display(Vector2 offset, MouseInfo mouseInfo){
-        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, this.size.x, this.size.y), Info.mainTexture);
+        GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, this.size.x, this.size.y), this.sprite);
         int i = 0;
         foreach (Pin pin in pins)
         {
@@ -285,14 +315,13 @@ public class Pin{
     }
     public void display(Vector2 offset, MouseInfo mouseInfo){
         circuitUtils.drawRectangle(new Vector2(this.position.x+this.baseComponent.position.x+offset.x-10, this.position.y+this.baseComponent.position.y+offset.y-10), new Vector2(20, 20), (this.value>=.5)?Color.red:Color.blue);
-        
+        if(this.type == Type.Output){
+            return;
+        }
         foreach (Pin component in connections)
         {
-            if(this.type == Type.Output){
-                if(component.type == Type.Input){
-                    component.value = this.value;
-                    Drawing.DrawLine(this.position+this.baseComponent.position+offset, component.position+component.baseComponent.position+offset, (this.value>=.5)?Color.red:Color.blue, 5, false);
-                }
+            if(component.type == Type.Output){
+                Drawing.DrawLine(this.position+this.baseComponent.position+offset, component.position+component.baseComponent.position+offset, (this.value>=.5)?Color.red:Color.blue, 5, false);
             }
         }
     }
@@ -300,15 +329,20 @@ public class Pin{
         if(this.type == Type.Output){
             return;
         }
+        this.value = 0f;
         foreach (Pin pin in this.connections)
         {
             if(pin.type == Type.Output){
-                this.value = pin.value;
+                this.value = (pin.value<this.value)?this.value:pin.value;
             }
         }
     }
     public void connect(Pin pin){
-        this.connections.Add(pin);
+        if(this.type == Type.Input){
+            this.connections.Add(pin);
+        }else{
+            pin.connections.Add(this);
+        }
     }
 }
 
@@ -317,6 +351,7 @@ public class Button : Component{
         this.position = position;
         this.addPin(new Pin(new Vector2(this.size.x, this.size.y/2)), Type.Output);
         this.name = "Button";
+        this.sprite = Info.Button;
     }
     /*public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
         if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
@@ -336,6 +371,7 @@ public class Button : Component{
         base.update(offset, mouseInfo);
         if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
             this.pins[0].value = (this.pins[0].value-1)*(this.pins[0].value-1);
+            this.sprite = (this.pins[0].value>.5)?Info.ButtonActive : Info.Button;
         }
     }
 }
@@ -347,6 +383,7 @@ public class AGate : Component{
         this.addPin(new Pin(new Vector2(0, 3*this.size.y/4)), Type.Input);
         this.addPin(new Pin(new Vector2(this.size.x, this.size.y/2)), Type.Output);
         this.name = "Button";
+        this.sprite = Info.AND;
     }
     /*public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
         if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
@@ -374,6 +411,7 @@ public class OGate : Component{
         this.addPin(new Pin(new Vector2(0, 3*this.size.y/4)), Type.Input);
         this.addPin(new Pin(new Vector2(this.size.x, this.size.y/2)), Type.Output);
         this.name = "Button";
+        this.sprite = Info.OR;
     }
     /*public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
         if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
@@ -402,6 +440,7 @@ public class Lamp : Component{
         this.pins = new List<Pin>();
         this.addPin(new Pin(new Vector2(0, 25)),Type.Input);
         this.name = "Lamp";
+        this.sprite = Info.Lamp;
     }
     /*public override void display(Texture2D mainTexture, Texture2D pinTexture, Vector2 offset, MouseInfo mouseInfo){
         GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), (this.pins[0].value==1)?pinTexture:mainTexture);
@@ -413,6 +452,10 @@ public class Lamp : Component{
         }
         Debug.Log("Lamp: "+this.pins[0].value);
     }*/
+    public override void update(Vector2 offset, MouseInfo mouseInfo){
+        base.update(offset, mouseInfo);
+        this.sprite = (this.pins[0].value>.5)?Info.LampActive : Info.Lamp;
+    }
 }
 
 public class Signal : Component{
