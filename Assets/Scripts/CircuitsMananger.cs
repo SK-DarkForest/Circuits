@@ -9,7 +9,6 @@ public class CircuitsMananger : MonoBehaviour
     private Circuit circuit;
     private bool buttonPressed = false;
     public bool dragging = false;
-    private MouseInfo mouseInfo;
     private Texture2D mainTexture, pinTexture;
     public bool solved = false;
     private Lamp lamp, lamp2, lamp3;
@@ -36,7 +35,7 @@ public class CircuitsMananger : MonoBehaviour
         pinTexture.Apply();
         Info.mainTexture = mainTexture;
         Info.pinTexture = pinTexture;
-        this.mouseInfo = new();
+        //Circuit Setup
         Button button = new Button(new Vector2(100, 150));
         Button button2 = new Button(new Vector2(100, 350));
         lamp = new Lamp(new Vector2(200, 100));
@@ -45,17 +44,18 @@ public class CircuitsMananger : MonoBehaviour
         AGate AND = new AGate(new Vector2(200, 200));
         OGate OR = new OGate(new Vector2(200, 300));
         circuit = new();
-        circuit.add(button);
-        circuit.add(button2);
-        circuit.add(lamp);
-        circuit.add(lamp2);
-        circuit.add(lamp3);
-        circuit.add(AND);
-        circuit.add(OR);
+        circuit.addPermanent(button);
+        circuit.addPermanent(button2);
+        circuit.addPermanent(lamp);
+        circuit.addPermanent(lamp2);
+        circuit.addPermanent(lamp3);
+        circuit.addPermanent(AND);
+        circuit.addPermanent(OR);
         circuit.addSpawner(new Spawner(new Button(new Vector2(100,0)),5));
         circuit.addSpawner(new Spawner(new Lamp(new Vector2(200,0)),5));
         circuit.addSpawner(new Spawner(new AGate(new Vector2(300,0)),5));
         circuit.addSpawner(new Spawner(new OGate(new Vector2(400,0)),5));
+        //Check
         List<Pin> pins = new List<Pin>();
         pins.Add(lamp.pins[0]);
         pins.Add(lamp2.pins[0]);
@@ -95,8 +95,8 @@ public class CircuitsMananger : MonoBehaviour
         mouseInfo.position = Event.current.mousePosition;
         mouseInfo.down = (Input.GetMouseButtonDown(0)&&!mouseInfo.pressed);
         mouseInfo.pressed = Input.GetMouseButton(0);
-        circuit.display(mouseInfo);
-        circuit.update(mouseInfo);
+        circuit.display();
+        circuit.update();
         if(solved) Message();
     }
     public void Callback(){

@@ -63,21 +63,25 @@ public class Circuit{
     public void add(Component component){
         Components.Add(component);
     }
+    public void addPermanent(Component component){
+        component.isDeletable = false;
+        Components.Add(component);
+    }
     public void addSpawner(Spawner component){
         spawners.Add(component);
         component.circuit = this;
     }
     public void delete(Component component){
-        foreach (Pin pin in component.pins)
+        /*foreach (Pin pin in component.pins)
         {
             component.pins.Remove(pin);
-        }
+        }*/
         Components.Remove(component);
-        Debug.Log("Removed: "+component);
+        //Debug.Log("Removed: "+component);
     }
-    public void display(MouseInfo mouseInfo){
+    public void display(){
         foreach(Component component in Components){
-            component.display(offset, mouseInfo);
+            component.display(offset);
         }
         foreach (Spawner spawner in spawners)
         {
@@ -91,9 +95,9 @@ public class Circuit{
             );
         }
     }
-    public void update(MouseInfo mouseInfo){
+    public void update(){
         foreach(Component component in Components){
-            component.update(this.offset,mouseInfo);
+            component.update(this.offset);
         }
         foreach (Check check in checks)
         {
@@ -102,20 +106,20 @@ public class Circuit{
         }
         foreach (Spawner spawner in this.spawners)
         {
-            spawner.update(mouseInfo,offset);
+            spawner.update(offset);
         }
         if(mouseInfo.up){
             this.draggedComponent = null;
         }
-        handlePinDrag(mouseInfo);
+        handlePinDrag();
     }
-    private void handlePinDrag(MouseInfo mouseInfo) {
+    private void handlePinDrag() {
         if (mouseInfo.down&&!isDraggingPin) {//if mouseInfo.down it always returns if mouseOverPin and does not drag
             // Start dragging a pin if the mouse is over a pin
             foreach (Component component in Components) {
                 foreach (Pin pin in component.pins) {
-                    if (isMouseOverPin(pin, mouseInfo)) {
-                        Debug.Log("Dragging pin");
+                    if (isMouseOverPin(pin)) {
+                        //Debug.Log("Dragging pin");
                         draggedPin = pin;
                         isDraggingPin = true;
                         return;
@@ -129,19 +133,19 @@ public class Circuit{
             // On mouse release, try to connect to another pin
             foreach (Component component in Components) {
                 foreach (Pin targetPin in component.pins) {
-                    if (isMouseOverPin(targetPin, mouseInfo) && draggedPin != null) {
+                    if (isMouseOverPin(targetPin) && draggedPin != null) {
                         //Debug.Log("Connecting pins: "+draggedPin.connections+" -> "+targetPin.connections);
                         // Ensure valid connection (e.g., output to input)
                         if(draggedPin.connections.Contains(targetPin)){
-                            Debug.Log("Removing connection: "+draggedPin.connections.Count);
+                            //Debug.Log("Removing connection: "+draggedPin.connections.Count);
                             draggedPin.connections.Remove(targetPin);
-                            Debug.Log("Removed connection: "+draggedPin.connections.Count);
+                            //Debug.Log("Removed connection: "+draggedPin.connections.Count);
                             break;
                         }
                         if(targetPin.connections.Contains(draggedPin)){
-                            Debug.Log("Removing connection: "+targetPin.connections.Count);
+                            //Debug.Log("Removing connection: "+targetPin.connections.Count);
                             targetPin.connections.Remove(draggedPin);
-                            Debug.Log("Removed connection: "+targetPin.connections.Count);
+                            //Debug.Log("Removed connection: "+targetPin.connections.Count);
                             break;
                         }
                         if (draggedPin.type == Type.Output && targetPin.type == Type.Input) {
@@ -160,19 +164,19 @@ public class Circuit{
         //mouseInfo.up = false;
     }
 
-    private bool isMouseOverPin(Pin pin, MouseInfo mouseInfo) {
+    private bool isMouseOverPin(Pin pin) {
         // Check if the mouse is hovering over a pin (considering the pin's size)
         Vector2 pinWorldPosition = pin.position + pin.baseComponent.position + offset;
         return (mouseInfo.position.x > pinWorldPosition.x - 10 && mouseInfo.position.x < pinWorldPosition.x + 10) &&
                (mouseInfo.position.y > pinWorldPosition.y - 10 && mouseInfo.position.y < pinWorldPosition.y + 10);
     }
-    public bool mouseOverPinsOrComponent(MouseInfo mouseInfo){
+    public bool mouseOverPinsOrComponent(){
         foreach (Component component in Components) {
             if((mouseInfo.position.x>component.position.x+offset.x)&&(mouseInfo.position.x<component.position.x+offset.x+50)&&(mouseInfo.position.y>component.position.y+offset.y)&&(mouseInfo.position.y<component.position.y+offset.y+50)){
                 return true;
             }
             foreach (Pin targetPin in component.pins) {
-                if (isMouseOverPin(targetPin, mouseInfo)) {
+                if (isMouseOverPin(targetPin)) {
                     return true;
                 }
             }
@@ -242,18 +246,18 @@ public class Spawner{
         this.count = count;
     }
     public void display(){
-        this.component.display(new Vector2(0, 0), new MouseInfo());
+        this.component.display(new Vector2(0, 0));
         GUI.Label(new Rect(this.position.x+50,this.position.y+50,40,40),$"{count}");
     }
-    public void update(MouseInfo mouseInfo, Vector2 offset){
+    public void update(Vector2 offset){
         if((mouseInfo.position.x>position.x)&&(mouseInfo.position.x<position.x+50)&&(mouseInfo.position.y>position.y)&&(mouseInfo.position.y<position.y+50)){
         if(mouseInfo.up)Debug.Log("Over: "+circuit.draggedComponent);
             if(circuit.draggedComponent==null&&count>0&&mouseInfo.down){
                 circuit.add((Component)Activator.CreateInstance(component.GetType(), new Vector2(this.position.x - offset.x, this.position.y + 75 - offset.y)));
                 count--;
             }else if(circuit.draggedComponent!=null&&mouseInfo.up&&circuit.draggedComponent.isDeletable){
-                Debug.Log("Delete");
                 if(this.component.GetType()==circuit.draggedComponent.GetType()&&mouseInfo.up){
+                    Debug.Log("Delete");
                     mouseInfo.up = false;
                     circuit.delete(circuit.draggedComponent);
                     count++;
@@ -276,12 +280,12 @@ public class Component{
         this.pins = new List<Pin>();
         this.sprite = Info.mainTexture;
     }
-    virtual public void display(Vector2 offset, MouseInfo mouseInfo){
+    virtual public void display(Vector2 offset){
         GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, this.size.x, this.size.y), this.sprite);
         int i = 0;
         foreach (Pin pin in pins)
         {
-            pin.display(offset, mouseInfo);
+            pin.display(offset);
             i++;
         }
     }
@@ -290,7 +294,7 @@ public class Component{
         pin.baseComponent = this;
         this.pins.Add(pin);
     }
-    virtual public void update(Vector2 offset,MouseInfo mouseInfo){
+    virtual public void update(Vector2 offset){
         foreach (Pin pin in pins)
         {
             pin.update();
@@ -313,7 +317,7 @@ public class Pin{
     public Pin(Vector2 position){
         this.position = position;
     }
-    public void display(Vector2 offset, MouseInfo mouseInfo){
+    public void display(Vector2 offset){
         circuitUtils.drawRectangle(new Vector2(this.position.x+this.baseComponent.position.x+offset.x-10, this.position.y+this.baseComponent.position.y+offset.y-10), new Vector2(20, 20), (this.value>=.5)?Color.red:Color.blue);
         if(this.type == Type.Output){
             return;
@@ -367,8 +371,8 @@ public class Button : Component{
         }
         Debug.Log("Button: "+this.pins[0].value);
     }*/
-    public override void update(Vector2 offset, MouseInfo mouseInfo){
-        base.update(offset, mouseInfo);
+    public override void update(Vector2 offset){
+        base.update(offset);
         if(mouseInfo.down&&(mouseInfo.position.x>position.x+offset.x)&&(mouseInfo.position.x<position.x+offset.x+50)&&(mouseInfo.position.y>position.y+offset.y)&&(mouseInfo.position.y<position.y+offset.y+50)){
             this.pins[0].value = (this.pins[0].value-1)*(this.pins[0].value-1);
             this.sprite = (this.pins[0].value>.5)?Info.ButtonActive : Info.Button;
@@ -399,8 +403,8 @@ public class AGate : Component{
         }
         Debug.Log("Button: "+this.pins[0].value);
     }*/
-    public override void update(Vector2 offset, MouseInfo mouseInfo){
-        base.update(offset, mouseInfo);
+    public override void update(Vector2 offset){
+        base.update(offset);
         this.pins[2].value = this.pins[0].value*this.pins[1].value;
     }
 }
@@ -427,8 +431,8 @@ public class OGate : Component{
         }
         Debug.Log("Button: "+this.pins[0].value);
     }*/
-    public override void update(Vector2 offset, MouseInfo mouseInfo){
-        base.update(offset, mouseInfo);
+    public override void update(Vector2 offset){
+        base.update(offset);
         this.pins[2].value = this.pins[0].value+this.pins[1].value;
     }
 }
@@ -452,8 +456,8 @@ public class Lamp : Component{
         }
         Debug.Log("Lamp: "+this.pins[0].value);
     }*/
-    public override void update(Vector2 offset, MouseInfo mouseInfo){
-        base.update(offset, mouseInfo);
+    public override void update(Vector2 offset){
+        base.update(offset);
         this.sprite = (this.pins[0].value>.5)?Info.LampActive : Info.Lamp;
     }
 }
@@ -501,14 +505,4 @@ public class Osziloskop : Component{
         }
         //GUI.DrawTexture(new Rect(this.position.x+offset.x, this.position.y+offset.y, 50, 50), this.drawTex);
     }*/
-}
-
-public class MouseInfo{
-    public Vector2 position;
-    public bool pressed;
-    public bool down;
-    public bool up;
-    public MouseInfo(){
-
-    }
 }
