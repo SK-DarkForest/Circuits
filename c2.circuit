@@ -1,0 +1,14 @@
+Button|100|150:
+Button|100|350:
+Lamp|200|100:
+Lamp|300|100:
+Lamp|300|300:
+AGate|200|200:
+OGate|200|300:
+Button|500|500:
+Lamp|600|500:#0|7|-1
+Spawn
+Spawner|100|0|5
+Spawner|200|0|5
+Spawner|300|0|5
+Spawner|400|0|5

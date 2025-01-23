@@ -1,0 +1,28 @@
+{
+    "components":[
+        {
+            "type":"Button",
+            "position":{
+                "x":0,
+                "y":0
+            },
+            "connections":[
+                {
+                    "pinID":0,
+                    "connectionComponentID":1,
+                    "connectionPinID":0
+                }
+            ]
+        }
+    ],
+    "spawners":[
+        {
+            "type":"Button",
+            "position":{
+                "x":0,
+                "y":0
+            },
+            "amount":5
+        }
+    ]
+}
